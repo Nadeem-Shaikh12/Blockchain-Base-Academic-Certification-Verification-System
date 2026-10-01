@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+
+
+model User {
+  id             String    @id @default(uuid())
+  name           String
+  email          String    @unique
+  password_hash  String
+  role           String
+  institution_id String?
+  institution    Institution? @relation(fields: [institution_id], references: [id])
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+}
+
+model Institution {
+  id           String    @id @default(uuid())
+  name         String
+  code         String    @unique
+  email        String
+  address      String?
+  created_at   DateTime  @default(now())
+  users        User[]
+  students     Student[]
+  certificates Certificate[]
+}
+
+model Student {
+  id                String    @id @default(uuid())
+  student_id        String    @unique // e.g. STU20270001
+  name              String
+  roll_number       String
+  enrollment_number String
+  email             String    @unique
+  course            String
+  department        String
+  admission_year    Int
+  passing_year      Int
+  institution_id    String
+  institution       Institution @relation(fields: [institution_id], references: [id])
+  certificates      Certificate[]
+  created_at        DateTime  @default(now())
+
+  @@unique([institution_id, roll_number])
+  @@unique([institution_id, enrollment_number])
+}
+
+model Certificate {
+  id               String            @id @default(uuid())
+  certificate_id   String            @unique // e.g. CERT-MGM-2027-000001
+  student_id       String
+  student          Student           @relation(fields: [student_id], references: [id])
+  institution_id   String
+  institution      Institution       @relation(fields: [institution_id], references: [id])
+  certificate_type String
+  course           String
+  department       String
+  grade            String
+  cgpa             String
+  passing_year     Int
+  issue_date       DateTime
+  status           String @default("ACTIVE")
+  certificate_hash String
+  created_at       DateTime          @default(now())
+  updated_at       DateTime          @updatedAt
+  
+  revocations       Revocation[]
+  verification_logs VerificationLog[]
+}
+
+model BlockchainBlock {
+  id               String      @id @default(uuid())
+  block_index      Int         @unique
+  block_id         String      @unique
+  transaction_id   String      @unique
+  certificate_id   String      // No FK relation to allow GENESIS
+  certificate_hash String
+  previous_hash    String
+  current_hash     String
+  issuer_id        String
+  timestamp        DateTime    @default(now())
+  status           String      @default("VALID")
+}
+
+model VerificationLog {
+  id                String      @id @default(uuid())
+  certificate_id    String
+  certificate       Certificate @relation(fields: [certificate_id], references: [certificate_id])
+  verified_by       String?
+  verification_type String
+  result            String
+  ip_address        String?
+  verified_at       DateTime    @default(now())
+}
+
+model Revocation {
+  id             String      @id @default(uuid())
+  certificate_id String
+  certificate    Certificate @relation(fields: [certificate_id], references: [certificate_id])
+  reason         String
+  revoked_by     String
+  revoked_at     DateTime    @default(now())
+}
